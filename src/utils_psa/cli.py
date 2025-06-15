@@ -16,7 +16,7 @@ def run_analysis(
         Path,
         typer.Option(
             help="Path to the top-level raw EEG data directory (e.g., './data/')."
-            " This directory should contain animal subdirectories like 'RAT1/', 'RAT2/', etc."
+            "This directory should contain animal subdirectories like 'RAT1/', 'RAT2/', etc."
         ),
     ],
     output_data_dir: Annotated[
@@ -36,7 +36,7 @@ def run_analysis(
         typer.Option(
             help="The session type to use as the baseline for normalization (e.g., 'baseline' for 'BL1' or 'BL2').",
         ),
-    ] = "baseline",  # Default baseline type for normalization
+    ] = "BL1",  # Default baseline type for normalization
 ):
     """
     Performs the full spectral chunk-based analysis workflow:
