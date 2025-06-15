@@ -14,7 +14,7 @@ def find_traces_cfft_files(raw_data_base_dir: Path) -> list[Path]:
     Returns:
         list[Path]: A list of Path objects for all found 'Traces_cFFT.csv' files.
     """
-    return list(raw_data_base_dir.rglob("Traces_cFFT.csv"))
+    return list(raw_data_base_dir.rglob("*_cFFT.csv"))
 
 
 def clean_file(input_filepath: Path, output_base_dir: Path) -> Path | None:
@@ -50,29 +50,25 @@ def clean_file(input_filepath: Path, output_base_dir: Path) -> Path | None:
             animal = animal_dir.name
             session_name = session_dir.name
         else:
-            # This assumes 'data' is the parent of 'RAT1'
-            if len(parts) > data_idx + 2:  # Ensure enough parts exist
-                animal = parts[data_idx + 1]  # e.g., 'RAT1'
-                session_name = parts[data_idx + 2]  # e.g., 'Ananya_rat1_BL1'
+            if len(parts) > data_idx + 2:
+                animal = parts[data_idx + 1]
+                session_name = parts[data_idx + 2]
             else:
                 raise ValueError(
                     f"Unexpected path structure: {input_filepath}. Expected '/data/{{animal}}/{{session_name}}/...'"
                 )
 
-        session_type = "baseline" if "BL" in session_name.upper() else "test"
-
         # Define the output directory for the cleaned file: {output_base_dir}/input/{animal}/{session_type}/
-        output_dir = output_base_dir / "input" / animal / session_type
+        output_dir = output_base_dir / "input" / animal / session_name
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Create the output filename
-        output_filepath = output_dir / input_filepath.name.replace(
-            "_cFFT.csv", "_cleaned.csv"
-        )
-
+        output_filepath = output_dir / "Traces_cFFT_cleaned.csv"
         # Read the file, skipping the first 20 lines
         # Using encoding='latin1' as often biological data CSVs use this.
-        df = pd.read_csv(input_filepath, skiprows=20, encoding="latin1")
+        df = pd.read_csv(
+            input_filepath, skiprows=20, encoding="latin1", low_memory=False
+        )
 
         df.to_csv(output_filepath, index=False)
         print(
@@ -95,10 +91,10 @@ def create_output_directories(output_base_dir: Path, animals: list[str]):
 
     The structure created is:
     - {output_base_dir}/input/
-    - {output_base_dir}/{animal}/rem/original/
-    - {output_base_dir}/{animal}/nrem/original/
-    - {output_base_dir}/{animal}/rem/chunked/
-    - {output_base_dir}/{animal}/nrem/chunked/
+    - {output_base_dir}/{animal}/{session}/rem/original/
+    - {output_base_dir}/{animal}/{session}/nrem/original/
+    - {output_base_dir}/{animal}/{session}/rem/chunked/
+    - {output_base_dir}/{animal}/{session}/nrem/chunked/
 
     Args:
         output_base_dir (Path): The root output directory.
