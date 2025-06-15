@@ -59,11 +59,14 @@ def clean_file(input_filepath: Path, output_base_dir: Path) -> Path | None:
                 )
 
         # Define the output directory for the cleaned file: {output_base_dir}/input/{animal}/{session_type}/
-        output_dir = output_base_dir / "input" / animal / session_name
+        output_dir = output_base_dir / "input" / animal
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Create the output filename
-        output_filepath = output_dir / "Traces_cFFT_cleaned.csv"
+        output_filepath = output_dir / f"{session_name}_cleaned.csv"
+        if output_filepath.exists():
+            print(f"Skipping '{output_filepath}' as it already exists.")
+            return output_filepath
         # Read the file, skipping the first 20 lines
         # Using encoding='latin1' as often biological data CSVs use this.
         df = pd.read_csv(
@@ -75,6 +78,7 @@ def clean_file(input_filepath: Path, output_base_dir: Path) -> Path | None:
             f"Cleaned '{input_filepath.name}' and saved to '{output_filepath}'"
         )
         return output_filepath
+
     except pd.errors.EmptyDataError:
         print(
             f"Error: File '{input_filepath}' is empty or contains no data after skipping 20 lines."
