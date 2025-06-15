@@ -25,37 +25,41 @@ Spectral chunk-based analysis of rat EEG data during REM and NREM sleep.
 
 ## 🧪 Workflow
 
-1. **Extract `Traces_cFFT.csv`**
+1. cli prompts the user for the raw data directory
+
+2. cli prompts the user for the output data directory
+
+3. **Extract `Traces_cFFT.csv`**
    From: `data/raw/{animal}/{baseline|test}/`
 
-2. **Clean files**
+4. **Clean files**
 
    - Remove first 20 lines (metadata)
    - Save to: `data/input/{animal}/{baseline|test}/`
 
-3. **Preprocess**
+5. **Preprocess**
 
    - Transpose CSV
    - Sort by 2nd column (R, NR, W)
    - Drop rows with 'W'
 
-4. **Split**
+6. **Split**
 
    - Save REM and NREM to:
      `data/output/{animal}/{rem|nrem}/original/{baseline|test}/`
 
-5. **Chunk by time**
+7. **Chunk by time**
 
    - Save to:
      `data/output/{animal}/{rem|nrem}/chunked/{baseline|test}_{chunk_num}`
 
-6. **Per-chunk analysis**
+8. **Per-chunk analysis**
 
    - Average frequency across epochs
    - Combine across baseline/test into:
      `data/output/{animal}/{rem|nrem}/chunked/{chunk_num}_raw`
 
-7. **Normalize**
+9. **Normalize**
 
    - Normalize per-frequency
    - Then normalize w.r.t BL1
