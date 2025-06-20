@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import typer
 
 
 def parse_custom_time(time_str: str) -> float:
@@ -28,16 +29,6 @@ def chunk_by_time(
         bool: True on success, False otherwise.
     """
     try:
-        df = pd.read_csv(input_filepath, encoding="latin1")
-
-        if "Time" not in df.columns:
-            raise ValueError(f"'Time' column missing in {input_filepath}")
-
-        # Convert custom time format to total seconds
-        df["TimeSeconds"] = df["Time"].apply(parse_custom_time)
-
-        max_time = df["TimeSeconds"].iloc[-1]
-
         # Parse path to extract identifiers
         parts = input_filepath.parts
         try:
@@ -50,6 +41,27 @@ def chunk_by_time(
         animal = parts[original_idx - 2]
         sleep_state = parts[original_idx - 1]
         test = parts[original_idx + 1].replace(".csv", "")
+        chunk_output_dir = (
+            output_base_dir / animal / sleep_state / "chunked" / test
+        )
+        chunk_output_dir.mkdir(parents=True, exist_ok=True)
+
+        chunk_files = list(chunk_output_dir.glob("chunk_*.csv"))
+        if chunk_files:
+            typer.echo(
+                f"Chunked files already exists. Skipping for {input_filepath}"
+            )
+            return True
+
+        df = pd.read_csv(input_filepath, encoding="latin1")
+
+        if "Time" not in df.columns:
+            raise ValueError(f"'Time' column missing in {input_filepath}")
+
+        # Convert custom time format to total seconds
+        df["TimeSeconds"] = df["Time"].apply(parse_custom_time)
+
+        max_time = df["TimeSeconds"].iloc[-1]
 
         chunk_num = 0
         for start_time in range(0, max_time, chunk_size):
