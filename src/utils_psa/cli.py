@@ -16,13 +16,15 @@ def run_analysis(
         Path,
         typer.Option(
             help="Path to the top-level raw EEG data directory (e.g., './data/')."
-            "This directory should contain animal subdirectories like 'RAT1/', 'RAT2/', etc."
+            "This directory should contain animal subdirectories like 'RAT1/', 'RAT2/', etc.",
+            prompt=True,
         ),
     ],
     output_data_dir: Annotated[
         Path,
         typer.Option(
-            help="Path to the output directory where all processed data will be saved (e.g., './data/processed/')."
+            help="Path to the output directory where all processed data will be saved (e.g., './data/processed/').",
+            prompt=True,
         ),
     ],
     chunk_size: Annotated[
@@ -30,13 +32,13 @@ def run_analysis(
         typer.Option(
             help="Number of epochs (rows) per chunk for analysis.", min=1
         ),
-    ] = 100,  # Default chunk size if not specified
+    ] = 100,
     baseline_type: Annotated[
         str,
         typer.Option(
             help="The session type to use as the baseline for normalization (e.g., 'baseline' for 'BL1' or 'BL2').",
         ),
-    ] = "BL1",  # Default baseline type for normalization
+    ] = "BL1",
 ):
     """
     Performs the full spectral chunk-based analysis workflow:
@@ -52,12 +54,11 @@ def run_analysis(
         )
         raise typer.Exit(code=1)
 
-    # Ensure output_data_dir exists (it will be created if it doesn't)
     output_data_dir.mkdir(parents=True, exist_ok=True)
     typer.echo("Starting analysis...")
     typer.echo(f"  Raw data source: '{raw_data_dir}'")
     typer.echo(f"  Output destination: '{output_data_dir}'")
-    typer.echo(f"  Chunk size set to: {chunk_size} epochs")
+    typer.echo(f"  Chunk size set to: {chunk_size} seconds")
     typer.echo(f"  Normalization baseline type: '{baseline_type}'")
 
     # --- Step 1: Clean files ---
@@ -90,15 +91,15 @@ def run_analysis(
         output_data_dir, animals
     )  # Create main output structure
 
-    cleaned_files_count = 0
+    cleaned_files = []
     for file_path in traces_cfft_files:
         cleaned_file_path = file_handling.clean_file(
             file_path, output_data_dir
         )  # Pass output_data_dir as base
         if cleaned_file_path:
-            cleaned_files_count += 1
+            cleaned_files.append(cleaned_file_path)
 
-    if cleaned_files_count == 0:
+    if not cleaned_files:
         typer.echo(
             "No raw data files were cleaned successfully. Analysis cannot proceed. Exiting."
         )
@@ -112,30 +113,12 @@ def run_analysis(
         []
     )  # This will store paths to the newly created REM/NREM files
 
-    # Iterate through the newly created cleaned input files
-    for animal in animals:
-        for session_type_sub_dir in [
-            (cleaned_input_dir / animal / "baseline"),
-            (cleaned_input_dir / animal / "test"),
-        ]:
-            if session_type_sub_dir.is_dir():
-                for cleaned_csv in session_type_sub_dir.glob("*.csv"):
-                    if preprocess.preprocess_and_split(
-                        cleaned_csv, output_data_dir
-                    ):
-                        # After preprocessing, the files are in {output_data_dir}/{animal}/{rem|nrem}/original/{baseline|test}/
-                        for state in ["rem", "nrem"]:
-                            original_files_path = (
-                                output_data_dir
-                                / animal
-                                / state
-                                / "original"
-                                / session_type_sub_dir.name
-                            )
-                            if original_files_path.is_dir():
-                                processed_rem_nrem_files.extend(
-                                    list(original_files_path.glob("*.csv"))
-                                )
+    for cleaned_file in cleaned_files:
+        processed_file = preprocess.preprocess_and_split(
+            cleaned_file, output_data_dir
+        )
+        if processed_file:
+            processed_rem_nrem_files.append(processed_file)
 
     if not processed_rem_nrem_files:
         typer.echo(
