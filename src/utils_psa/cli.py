@@ -32,7 +32,7 @@ def run_analysis(
         typer.Option(
             help="Number of epochs (rows) per chunk for analysis.", min=1
         ),
-    ] = 100,
+    ] = 3600,
     baseline_type: Annotated[
         str,
         typer.Option(
