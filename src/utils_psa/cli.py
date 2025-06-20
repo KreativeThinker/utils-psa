@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 import typer
 from typing_extensions import Annotated
@@ -109,7 +110,7 @@ def run_analysis(
     typer.echo(
         "\n--- Step 2: Preprocessing and splitting data into REM/NREM ---"
     )
-    processed_rem_nrem_files = (
+    processed_rem_nrem_files: List[Path] = (
         []
     )  # This will store paths to the newly created REM/NREM files
 
@@ -118,7 +119,7 @@ def run_analysis(
             cleaned_file, output_data_dir
         )
         if processed_file:
-            processed_rem_nrem_files.append(processed_file)
+            processed_rem_nrem_files.extend(processed_file)
 
     if not processed_rem_nrem_files:
         typer.echo(
@@ -142,7 +143,6 @@ def run_analysis(
         )
         raise typer.Exit(code=1)
     typer.echo(f"Successfully created {chunked_files_count} chunks.")
-
     # --- Step 4: Per-chunk analysis and combine ---
     typer.echo("\n--- Step 4: Performing per-chunk analysis and combining ---")
     # Determine the maximum chunk number generated to iterate correctly
