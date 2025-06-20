@@ -3,73 +3,84 @@ from pathlib import Path
 import pandas as pd
 
 
-def chunk_by_time(
-    input_filepath: Path, output_base_dir: Path, chunk_size: int = 100
-) -> bool:
-    """Chunks the input DataFrame (REM or NREM data) by time (rows) into
-    segments of 'chunk_size' epochs. Each chunk is saved as a separate CSV
-    file.
+def parse_custom_time(time_str: str) -> float:
+    """Parses a time string in HH:MM:SS:msms format into total seconds."""
+    try:
+        _, time_str = time_str.split(".", 1)
+        hh, mm, ss = map(int, time_str.split(":"))
+        return hh * 3600 + mm * 60 + ss
+    except Exception as e:
+        raise ValueError(f"Invalid time format: '{time_str}' — {e}")
 
-    Saves to: data/output/{animal}/{rem|nrem}/chunked/{original_filename_stem}_{session_type}_{chunk_num}.csv
+
+def chunk_by_time(
+    input_filepath: Path, output_base_dir: Path, chunk_size: int = 3600
+) -> bool:
+    """Splits a CSV based on 'Time' column (HH:MM:SS:cs format), into chunks
+    each covering `chunk_size` seconds, and saves them as chunk_{num}.csv.
 
     Args:
-        input_filepath (Path): The path to the preprocessed REM or NREM CSV file.
-        output_base_dir (Path): The root output directory.
-        chunk_size (int): The number of rows (epochs) per chunk.
+        input_filepath (Path): Input CSV file path.
+        output_base_dir (Path): Base directory for output.
+        chunk_size (int): Time interval (seconds) per chunk.
 
     Returns:
-        bool: True if chunking was successful, False otherwise.
+        bool: True on success, False otherwise.
     """
     try:
         df = pd.read_csv(input_filepath, encoding="latin1")
 
-        # Determine animal, sleep state (rem/nrem), and session type (baseline/test)
-        # Example input_filepath: data/processed/RAT1/rem/original/baseline/Traces_cFFT_rem.csv
+        if "Time" not in df.columns:
+            raise ValueError(f"'Time' column missing in {input_filepath}")
+
+        # Convert custom time format to total seconds
+        df["TimeSeconds"] = df["Time"].apply(parse_custom_time)
+
+        max_time = df["TimeSeconds"].iloc[-1]
+
+        # Parse path to extract identifiers
         parts = input_filepath.parts
-        # Find the 'original' directory to determine relative path components
         try:
             original_idx = parts.index("original")
         except ValueError:
             raise ValueError(
-                f"Unexpected input path structure for chunking: '{input_filepath}'. 'original' directory not found."
+                f"'original' folder not found in path: {input_filepath}"
             )
 
-        animal = parts[original_idx - 2]  # e.g., 'RAT1'
-        sleep_state = parts[original_idx - 1]  # e.g., 'rem' or 'nrem'
-        session_type = parts[original_idx + 1]  # e.g., 'baseline' or 'test'
-        original_filename_stem = input_filepath.stem.replace(
-            "_rem", ""
-        ).replace(
-            "_nrem", ""
-        )  # e.g., 'Traces_cFFT'
+        animal = parts[original_idx - 2]
+        sleep_state = parts[original_idx - 1]
+        test = parts[original_idx + 1].replace(".csv", "")
 
-        num_chunks = (
-            len(df) + chunk_size - 1
-        ) // chunk_size  # Calculate total number of chunks
+        chunk_num = 0
+        for start_time in range(0, max_time, chunk_size):
+            end_time = start_time + chunk_size
+            chunk_df = df[
+                (df["TimeSeconds"] >= start_time)
+                & (df["TimeSeconds"] < end_time)
+            ].copy()
 
-        for i in range(num_chunks):
-            start_row = i * chunk_size
-            end_row = min((i + 1) * chunk_size, len(df))
-            chunk_df = df.iloc[start_row:end_row].copy()
+            if chunk_df.empty:
+                continue
 
-            # Define the output directory for this chunk
             chunk_output_dir = (
-                output_base_dir / animal / sleep_state / "chunked"
+                output_base_dir / animal / sleep_state / "chunked" / test
             )
             chunk_output_dir.mkdir(parents=True, exist_ok=True)
 
-            # Define the filename for this chunk
-            # Example: Traces_cFFT_baseline_00.csv
-            chunk_filename = (
-                f"{original_filename_stem}_{session_type}_{i:02d}.csv"
+            chunk_filename = f"chunk_{chunk_num:02d}.csv"
+            chunk_df.drop(columns=["TimeSeconds"]).to_csv(
+                chunk_output_dir / chunk_filename, index=False
             )
-            chunk_df.to_csv(chunk_output_dir / chunk_filename, index=False)
+
             print(
-                f"Saved chunk {i:02d} of '{input_filepath.name}' to '{chunk_output_dir / chunk_filename}'"
+                f"Saved chunk {chunk_num:02d}: {start_time}s – {end_time}s → {chunk_filename}"
             )
+            chunk_num += 1
+
         return True
+
     except Exception as e:
-        print(f"Error chunking file '{input_filepath}': {e}")
+        print(f"Error chunking by time from '{input_filepath}': {e}")
         return False
 
 
