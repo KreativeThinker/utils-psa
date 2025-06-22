@@ -4,7 +4,7 @@ from typing import List
 import typer
 from typing_extensions import Annotated
 
-from . import chunk, file_handling, normalize, preprocess
+from . import chunk, file_handling, preprocess
 
 app = typer.Typer(
     help="Spectral Power Analysis tool for rat EEG data during REM and NREM sleep."
@@ -143,6 +143,7 @@ def run_analysis(
         )
         raise typer.Exit(code=1)
     typer.echo(f"Successfully created {chunked_files_count} chunks.")
+    """
     # --- Step 4: Per-chunk analysis and combine ---
     typer.echo("\n--- Step 4: Performing per-chunk analysis and combining ---")
     # Determine the maximum chunk number generated to iterate correctly
@@ -209,6 +210,7 @@ def run_analysis(
         )
         raise typer.Exit(code=1)
     typer.echo(f"Successfully normalized {normalized_files_count} datasets.")
+"""
 
     typer.echo("\n--- Spectral chunk-based analysis complete! ---")
     typer.echo(

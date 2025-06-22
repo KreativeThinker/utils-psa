@@ -96,121 +96,27 @@ def chunk_by_time(
         return False
 
 
-def per_chunk_analysis(
-    output_base_dir: Path, animal: str, sleep_state: str, chunk_num: int
-) -> bool:
-    """Performs per-chunk analysis by averaging frequency across epochs for all
-    session types (baseline/test) for a specific chunk number and animal, then
-    combines these averages into a single raw file.
+def per_chunk_analysis(input_filepath: Path, output_base_dir: Path) -> Path:
+    """Average out frequency/amplitude over time for each chunk for each
+    animal."""
 
-    Saves to: data/output/{animal}/{rem|nrem}/chunked/chunk_{chunk_num}_raw.csv
+    # check if input files exists
 
-    Args:
-        output_base_dir (Path): The root output directory.
-        animal (str): The name of the animal (e.g., 'RAT1').
-        sleep_state (str): The sleep state ('rem' or 'nrem').
-        chunk_num (int): The current chunk number to analyze.
+    # check if output file already exists
 
-    Returns:
-        bool: True if analysis and combining were successful, False otherwise.
-    """
-    all_chunks_data = []
+    # if not exists, read input file and perform following steps
+    # for each corresponding chunk for all tests
 
-    # Search for all chunk files belonging to this animal, sleep_state, and chunk_num
-    # This will find files like 'Traces_cFFT_baseline_00.csv', 'Traces_cFFT_test_00.csv' etc.
-    matching_files = list(
-        (output_base_dir / animal / sleep_state / "chunked").glob(
-            f"*_{chunk_num:02d}.csv"
-        )
-    )
+    # drop columns [EpochNo, Stage, Time, Unnamed*]
 
-    if not matching_files:
-        # print(f"No matching chunk files found for animal: '{animal}', state: '{sleep_state}', chunk: {chunk_num:02d}.")
-        return False  # No files to process
+    # Take mean of all columns
 
-    for filepath in matching_files:
-        try:
-            df = pd.read_csv(filepath, encoding="latin1")
+    # Take mean values and corresponding frequency values to make
+    # a new dataframe of frequency, mean amplitude (columnar format)
 
-            # Identify frequency columns. These are numerical columns that are not 'EpochNo', 'Stage', 'Time'.
-            # Based on the sample, 'EpochNo', 'Stage', 'Time' are likely the first three columns.
-            non_freq_cols = ["EpochNo", "Stage", "Time"]
-            # Filter out non-numeric columns and known metadata columns
-            freq_cols = [
-                col
-                for col in df.columns
-                if col not in non_freq_cols
-                and pd.api.types.is_numeric_dtype(df[col])
-            ]
+    # append dataframe to output file with prepended test/baseline info
+    # if baseline1 or bl1 then store as freq_bl1 and mean_amp_bl1 and so on
 
-            if not freq_cols:
-                print(
-                    f"Warning: No valid numeric frequency columns found in '{filepath}'. Skipping."
-                )
-                continue
+    # return path to output file
 
-            # Ensure frequency columns are numeric, coercing errors to NaN
-            df_freq_numeric = df[freq_cols].apply(
-                pd.to_numeric, errors="coerce"
-            )
-            # Drop any frequency columns that became entirely NaN (e.g., if they contained only text)
-            df_freq_numeric = df_freq_numeric.dropna(axis=1, how="all")
-
-            if df_freq_numeric.empty:
-                print(
-                    f"Warning: No valid frequency data remaining after cleaning for '{filepath}'. Skipping."
-                )
-                continue
-
-            # Average frequency across epochs (rows) for the current chunk
-            average_frequencies = (
-                df_freq_numeric.mean().to_frame().T
-            )  # .T makes it a single row DataFrame
-
-            # Add metadata for identification
-            # Filename example: Traces_cFFT_baseline_00.csv -> extract 'baseline' or 'test'
-            filename_parts = filepath.stem.split("_")
-            session_type = "unknown"
-            if "baseline" in filename_parts:
-                session_type = "baseline"
-            elif "test" in filename_parts:
-                session_type = "test"
-
-            average_frequencies["Animal"] = animal
-            average_frequencies["SleepState"] = (
-                sleep_state  # Add sleep state for clarity in combined file
-            )
-            average_frequencies["SessionType"] = session_type
-            average_frequencies["ChunkNum"] = chunk_num
-
-            all_chunks_data.append(average_frequencies)
-
-        except Exception as e:
-            print(f"Error processing chunk file '{filepath}': {e}")
-
-    if all_chunks_data:
-        # Concatenate all averaged chunk dataframes
-        combined_df = pd.concat(all_chunks_data, ignore_index=True)
-
-        # Reorder columns to have metadata first for readability
-        meta_cols = ["Animal", "SleepState", "SessionType", "ChunkNum"]
-        final_cols = meta_cols + [
-            col for col in combined_df.columns if col not in meta_cols
-        ]
-        combined_df = combined_df[final_cols]
-
-        # Define output path for the combined raw analysis file
-        output_file_dir = output_base_dir / animal / sleep_state / "chunked"
-        output_file_dir.mkdir(
-            parents=True, exist_ok=True
-        )  # Ensure directory exists
-        output_file = output_file_dir / f"chunk_{chunk_num:02d}_raw.csv"
-
-        combined_df.to_csv(output_file, index=False)
-        print(
-            f"Combined raw analysis for chunk {chunk_num:02d} ({animal} - {sleep_state}) and saved to '{output_file}'"
-        )
-        return True
-    else:
-        # print(f"No data to combine for chunk {chunk_num:02d} ({animal} - {sleep_state}).")
-        return False
+    return Path("asd")
