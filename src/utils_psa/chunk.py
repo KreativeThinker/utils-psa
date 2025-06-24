@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 import typer
@@ -96,7 +97,9 @@ def chunk_by_time(
         return False
 
 
-def per_chunk_analysis(input_base_path: Path, output_base_dir: Path) -> Path:
+def per_chunk_analysis(
+    input_base_path: Path, output_base_dir: Path
+) -> List[Path]:
     """For each chunk index (chunk_00, chunk_01, ...), computes mean amplitude
     per frequency across all tests for a given animal and sleep state. Outputs
     one file per chunk:
@@ -119,6 +122,8 @@ def per_chunk_analysis(input_base_path: Path, output_base_dir: Path) -> Path:
 
     chunk_output_base = output_base_dir / "chunks"
     chunk_output_base.mkdir(parents=True, exist_ok=True)
+
+    output_paths: List[Path] = []
 
     for animal_dir in input_base_path.iterdir():
         if not animal_dir.is_dir():
@@ -202,7 +207,10 @@ def per_chunk_analysis(input_base_path: Path, output_base_dir: Path) -> Path:
                 output_chunk_dir = chunk_output_base / sleep_state / animal
                 output_chunk_dir.mkdir(parents=True, exist_ok=True)
                 output_path = output_chunk_dir / f"{chunk_index}.csv"
+                output_paths.append(output_path)
                 merged_df.to_csv(output_path, index=False)
                 print(f"[✓] Wrote {output_path}")
 
-    return chunk_output_base
+    return output_paths
+
+    # return [chunk_output_base]
