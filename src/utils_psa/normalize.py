@@ -45,8 +45,10 @@ def normalize_data(
     df = df.div(df.iloc[:, 0], axis=0)
 
     # Step 3: Compute BL as average of first two columns
-    df["BL"] = df.iloc[:, 0:2].mean(axis=1)
+    baseline = df.iloc[:, 0:2].mean(axis=1)
+    df = df.iloc[:, 2:]
     df.insert(0, "Frequency", freq)
+    df.insert(1, "BL", baseline)
 
     # Infer metadata from path: assumes structure like .../{animal}/{chunk}/{file}
     parts = input_filepath.parts
