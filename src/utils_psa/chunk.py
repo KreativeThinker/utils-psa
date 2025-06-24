@@ -96,27 +96,113 @@ def chunk_by_time(
         return False
 
 
-def per_chunk_analysis(input_filepath: Path, output_base_dir: Path) -> Path:
-    """Average out frequency/amplitude over time for each chunk for each
-    animal."""
+def per_chunk_analysis(input_base_path: Path, output_base_dir: Path) -> Path:
+    """For each chunk index (chunk_00, chunk_01, ...), computes mean amplitude
+    per frequency across all tests for a given animal and sleep state. Outputs
+    one file per chunk:
+    output_base_dir/CHUNKS/{REM|NREM}/{ANIMAL}/chunk_XX.csv.
 
-    # check if input files exists
+    The final output has:
+        Frequency, mean_amp_bl1, mean_amp_bl2, mean_amp_test1, ...
 
-    # check if output file already exists
+    Args:
+        input_base_path (Path): Base directory containing input chunked files.
+        output_base_dir (Path): Where to store aggregated output.
 
-    # if not exists, read input file and perform following steps
-    # for each corresponding chunk for all tests
+    Returns:
+        Path: Base output path (i.e., output_base_dir / CHUNKS).
+    """
+    if not input_base_path.exists():
+        raise FileNotFoundError(
+            f"Input path does not exist: {input_base_path}"
+        )
 
-    # drop columns [EpochNo, Stage, Time, Unnamed*]
+    chunk_output_base = output_base_dir / "chunks"
+    chunk_output_base.mkdir(parents=True, exist_ok=True)
 
-    # Take mean of all columns
+    for animal_dir in input_base_path.iterdir():
+        if not animal_dir.is_dir():
+            continue
+        animal = animal_dir.name
 
-    # Take mean values and corresponding frequency values to make
-    # a new dataframe of frequency, mean amplitude (columnar format)
+        for sleep_dir in animal_dir.iterdir():
+            if not sleep_dir.is_dir():
+                continue
+            sleep_state = sleep_dir.name.upper()  # REM/NREM
 
-    # append dataframe to output file with prepended test/baseline info
-    # if baseline1 or bl1 then store as freq_bl1 and mean_amp_bl1 and so on
+            chunked_path = sleep_dir / "chunked"
+            if not chunked_path.exists():
+                continue
 
-    # return path to output file
+            # Map: chunk_index -> { test_name -> DataFrame of that chunk }
+            chunks = {}
 
-    return Path("asd")
+            for test_dir in chunked_path.iterdir():
+                if not test_dir.is_dir():
+                    continue
+                test_id = test_dir.name.lower()
+
+                for chunk_file in test_dir.glob("chunk_*.csv"):
+                    chunk_index = chunk_file.stem  # e.g., "chunk_00"
+
+                    df = pd.read_csv(chunk_file)
+
+                    # Drop metadata columns
+                    df = df.drop(
+                        columns=[
+                            col
+                            for col in df.columns
+                            if col in ["EpochNo", "Stage", "Time"]
+                            or col.startswith("Unnamed")
+                        ],
+                        errors="ignore",
+                    )
+                    if df.empty:
+                        continue
+
+                    # Calculate mean per frequency
+                    means = df.mean(axis=0)
+
+                    # Construct single-column dataframe for this test
+                    result_df = pd.DataFrame(
+                        {
+                            "Frequency": means.index,
+                            f"mean_amp_{test_id}": means.values,
+                        }
+                    )
+
+                    # Store in chunks dict
+                    if chunk_index not in chunks:
+                        chunks[chunk_index] = {}
+                    chunks[chunk_index][test_id] = result_df
+
+            # Write output per chunk
+            for chunk_index, test_dfs in chunks.items():
+                # Merge all test DataFrames on Frequency
+                merged_df = None
+                for df in test_dfs.values():
+                    if merged_df is None:
+                        merged_df = df
+                    else:
+                        merged_df = merged_df.merge(
+                            df, on="Frequency", how="outer"
+                        )
+
+                # Sort frequencies numerically
+                merged_df["FrequencyHz"] = (
+                    merged_df["Frequency"]
+                    .str.replace("Hz", "", regex=False)
+                    .astype(float)
+                )
+                merged_df = merged_df.sort_values("FrequencyHz").drop(
+                    columns="FrequencyHz"
+                )
+
+                # Output path: CHUNKS/{REM|NREM}/{ANIMAL}/chunk_XX.csv
+                output_chunk_dir = chunk_output_base / sleep_state / animal
+                output_chunk_dir.mkdir(parents=True, exist_ok=True)
+                output_path = output_chunk_dir / f"{chunk_index}.csv"
+                merged_df.to_csv(output_path, index=False)
+                print(f"[✓] Wrote {output_path}")
+
+    return chunk_output_base
