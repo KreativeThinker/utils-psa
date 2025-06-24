@@ -143,74 +143,13 @@ def run_analysis(
         )
         raise typer.Exit(code=1)
     typer.echo(f"Successfully created {chunked_files_count} chunks.")
-    """
     # --- Step 4: Per-chunk analysis and combine ---
+
     typer.echo("\n--- Step 4: Performing per-chunk analysis and combining ---")
-    # Determine the maximum chunk number generated to iterate correctly
-    max_chunk_num = -1
-    for path in (output_data_dir).rglob("*_??.csv"):
-        try:
-            # Filenames are like 'Traces_cFFT_baseline_00.csv', 'Traces_cFFT_test_01.csv'
-            # Extract the last two characters before .csv as chunk number
-            chunk_str = path.stem[-2:]
-            current_chunk_num = int(chunk_str)
-            if current_chunk_num > max_chunk_num:
-                max_chunk_num = current_chunk_num
-        except (IndexError, ValueError):
-            continue
+    chunk.per_chunk_analysis(output_data_dir, output_data_dir)
+    typer.echo("Chunk analysis complete.")
 
-    if max_chunk_num < 0:
-        typer.echo(
-            "No chunked files found to perform per-chunk analysis. Exiting."
-        )
-        raise typer.Exit(code=1)
-
-    per_chunk_analysis_done_count = 0
-    for animal in animals:
-        for sleep_state in ["rem", "nrem"]:
-            for i in range(max_chunk_num + 1):
-                if chunk.per_chunk_analysis(
-                    output_data_dir, animal, sleep_state, i
-                ):
-                    per_chunk_analysis_done_count += 1
-
-    if per_chunk_analysis_done_count == 0:
-        typer.echo(
-            "Per-chunk analysis and combining failed for all relevant files. Analysis cannot proceed. Exiting."
-        )
-        raise typer.Exit(code=1)
-    typer.echo(
-        f"Successfully performed per-chunk analysis and combined for {per_chunk_analysis_done_count} datasets."
-    )
-
-    # --- Step 5: Normalize data ---
-    typer.echo("\n--- Step 5: Normalizing data ---")
-    normalized_files_count = 0
-    for animal in animals:
-        for sleep_state in ["rem", "nrem"]:
-            for i in range(max_chunk_num + 1):
-                raw_combined_file = (
-                    output_data_dir
-                    / animal
-                    / sleep_state
-                    / "chunked"
-                    / f"chunk_{i:02d}_raw.csv"
-                )
-                if raw_combined_file.exists():
-                    if normalize.normalize_data(
-                        raw_combined_file, output_data_dir, baseline_type
-                    ):
-                        normalized_files_count += 1
-                # else:
-                # typer.echo(f"Skipping normalization for '{raw_combined_file}': File not found.")
-
-    if normalized_files_count == 0:
-        typer.echo(
-            "Normalization failed for all relevant files. No normalized output generated. Exiting."
-        )
-        raise typer.Exit(code=1)
-    typer.echo(f"Successfully normalized {normalized_files_count} datasets.")
-"""
+    typer.echo("\n--- Step 5: Performing normalization ---")
 
     typer.echo("\n--- Spectral chunk-based analysis complete! ---")
     typer.echo(
