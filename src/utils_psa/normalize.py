@@ -42,7 +42,7 @@ def normalize_data(
     df = df / df.mean()
 
     # Step 2: Row-wise normalization (divide each row by its sum)
-    df = df.div(df.sum(axis=1), axis=0)
+    df = df.div(df.iloc[:, 0], axis=0)
 
     # Step 3: Compute BL as average of first two columns
     df["BL"] = df.iloc[:, 0:2].mean(axis=1)
