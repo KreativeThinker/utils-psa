@@ -4,6 +4,8 @@ from typing import List
 import typer
 from typing_extensions import Annotated
 
+from utils_psa import normalize
+
 from . import chunk, file_handling, preprocess
 
 app = typer.Typer(
@@ -146,10 +148,16 @@ def run_analysis(
     # --- Step 4: Per-chunk analysis and combine ---
 
     typer.echo("\n--- Step 4: Performing per-chunk analysis and combining ---")
-    chunk.per_chunk_analysis(output_data_dir, output_data_dir)
+    chunked_files = chunk.per_chunk_analysis(output_data_dir, output_data_dir)
     typer.echo("Chunk analysis complete.")
 
+    normalized_files: List[Path] = []
     typer.echo("\n--- Step 5: Performing normalization ---")
+    for chunk_file in chunked_files:
+        normalized_files.append(
+            normalize.normalize_data(chunk_file, output_data_dir)
+        )
+    typer.echo("Normalization complete")
 
     typer.echo("\n--- Spectral chunk-based analysis complete! ---")
     typer.echo(
