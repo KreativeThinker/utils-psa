@@ -6,7 +6,7 @@ from typing_extensions import Annotated
 
 from utils_psa import normalize
 
-from . import chunk, file_handling, preprocess
+from . import chunk, compile, file_handling, preprocess
 
 app = typer.Typer(
     help="Spectral Power Analysis tool for rat EEG data during REM and NREM sleep."
@@ -158,6 +158,8 @@ def run_analysis(
             normalize.normalize_data(chunk_file, output_data_dir)
         )
     typer.echo("Normalization complete")
+
+    compile.combine_chunks(output_data_dir / "normalized", output_data_dir)
 
     typer.echo("\n--- Spectral chunk-based analysis complete! ---")
     typer.echo(
