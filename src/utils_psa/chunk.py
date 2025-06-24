@@ -203,6 +203,13 @@ def per_chunk_analysis(
                     columns="FrequencyHz"
                 )
 
+                # Reorder columns: Frequency first, then sorted rest
+                cols = merged_df.columns.tolist()
+                sorted_cols = ["Frequency"] + sorted(
+                    [col for col in cols if col != "Frequency"]
+                )
+                merged_df = merged_df[sorted_cols]
+
                 # Output path: CHUNKS/{REM|NREM}/{ANIMAL}/chunk_XX.csv
                 output_chunk_dir = chunk_output_base / sleep_state / animal
                 output_chunk_dir.mkdir(parents=True, exist_ok=True)
