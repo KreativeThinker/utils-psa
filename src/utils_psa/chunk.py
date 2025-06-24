@@ -172,7 +172,7 @@ def per_chunk_analysis(
                     result_df = pd.DataFrame(
                         {
                             "Frequency": means.index,
-                            f"mean_amp_{test_id}": means.values,
+                            f"{test_id}": means.values,
                         }
                     )
 

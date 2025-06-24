@@ -44,8 +44,8 @@ def preprocess_and_split(
         output_nrem_dir = output_base_dir / animal / "nrem" / "original"
         output_rem_dir.mkdir(parents=True, exist_ok=True)
         output_nrem_dir.mkdir(parents=True, exist_ok=True)
-        output_rem_file = output_rem_dir / f"{session_type}_rem.csv"
-        output_nrem_file = output_nrem_dir / f"{session_type}_nrem.csv"
+        output_rem_file = output_rem_dir / f"{session_type}.csv"
+        output_nrem_file = output_nrem_dir / f"{session_type}.csv"
 
         if output_nrem_file.exists() and output_rem_file.exists():
             return [output_rem_file, output_nrem_file]
