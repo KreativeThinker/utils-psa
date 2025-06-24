@@ -73,6 +73,7 @@ def chunk_by_time(
             ].copy()
 
             if chunk_df.empty:
+                chunk_num += 1
                 continue
 
             chunk_output_dir = (
@@ -89,6 +90,9 @@ def chunk_by_time(
                 f"Saved chunk {chunk_num:02d}: {start_time}s – {end_time}s → {chunk_filename}"
             )
             chunk_num += 1
+
+            if chunk_num >= 5:
+                break
 
         return True
 
